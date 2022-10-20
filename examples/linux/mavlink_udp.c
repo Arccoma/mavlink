@@ -68,7 +68,7 @@ uint16_t len;
 uint8_t buf[BUFFER_LENGTH];
 int bytes_sent;
 
-//int sock =  socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);// main 함수 밖 함수 호출이 안된다.
+int sock;
 struct sockaddr_in gcAddr; 
 struct sockaddr_in locAddr;
 //struct sockaddr_in fromAddr;
@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
 	locAddr.sin_addr.s_addr = INADDR_ANY;
 	locAddr.sin_port = htons(14551);
 	
-	int sock =  socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);// main함수 전으로 빼지 못했다.
+	sock =  socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	/* Bind the socket to port 14551 - necessary to receive packets from qgroundcontrol */ 
 	if (-1 == bind(sock,(struct sockaddr *)&locAddr, sizeof(struct sockaddr)))
     {
@@ -135,43 +135,43 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
     }
 	
-  	//I don't know What is qcAddr. 
 	memset(&gcAddr, 0, sizeof(gcAddr));
 	gcAddr.sin_family = AF_INET;
 	gcAddr.sin_addr.s_addr = inet_addr(target_ip);
 	gcAddr.sin_port = htons(14550);
 
 	//msg.msgid = MAVLINK_MSG_ID_BATTERY_STATUS;
-	//send_mavlink_data_to_qgc(sock);	
+	memset(buf, 0, BUFFER_LENGTH);
 	for (;;) {
 		send_mavlink_data_to_qgc(sock); // only send hearbeat package
+		memset(buf, 0, BUFFER_LENGTH);
 		recv_mavlink_data_from_qgc(sock);
+		memset(buf, 0, BUFFER_LENGTH);
 		sleep(1); // Sleep one second
     }
 }//main
 
 void recv_mavlink_data_from_qgc(int sock){
 	//msg.msgid = 147;//MAVLINK_MSG_ID_BATTERY_STATUS;
-	memset(buf, 0, BUFFER_LENGTH);
-		recsize = recvfrom(sock, (void *)buf, BUFFER_LENGTH, 0, (struct sockaddr *)&gcAddr, &fromlen);
-		if (recsize > 0){
-			// Something received - print out all bytes and parse packet
+	
+	recsize = recvfrom(sock, (void *)buf, BUFFER_LENGTH, 0, (struct sockaddr *)&gcAddr, &fromlen);
+	if (recsize > 0){
+		// Something received - print out all bytes and parse packet
 			
-			printf("Bytes Received: %d\nDatagram: ", (int)recsize);
-			for (i = 0; i < recsize; ++i)
+		printf("Bytes Received: %d\nDatagram: ", (int)recsize);
+		for (i = 0; i < recsize; ++i)
+		{
+			temp = buf[i];
+			printf("%02x ", (unsigned char)temp);
+			if (mavlink_parse_char(MAVLINK_COMM_0, buf[i], &msg, &status))
 			{
-				temp = buf[i];
-				printf("%02x ", (unsigned char)temp);
-				if (mavlink_parse_char(MAVLINK_COMM_0, buf[i], &msg, &status))
-				{
-					// Packet received
-					
-					printf("\nReceived packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
-				}
+				// Packet received
+				
+				printf("\nReceived packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
 			}
-			printf("\n");
 		}
-		memset(buf, 0, BUFFER_LENGTH);
+		printf("\n");
+	}		
 }
 
 void send_mavlink_data_to_qgc(int sock){
