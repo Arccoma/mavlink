@@ -142,13 +142,24 @@ int main(int argc, char* argv[])
 
 	//msg.msgid = MAVLINK_MSG_ID_BATTERY_STATUS;
 	memset(buf, 0, BUFFER_LENGTH);
-	for (;;) {
+	
+	printf("%s","\n///////////////////////////////////////////\n\n");
+	mavlink_msg_battery_status_pack(1, 200, &msg,0,1,1,77,voltages,0,0,-1,battery_remaining,0,1,0,0,0);
+	printf("%s", "mavlink_msg_battery_status_pack(.. &msg,..)\n");
+	printf("%s%d", "msg.msgid:",msg.msgid);
+	if(MAVLINK_MSG_ID_BATTERY_STATUS==msg.msgid){
+		printf("%s", " is MAVLINK_MSG_ID_BATTERY_STATUS\n\n");
+	}
+	printf("%s","\n//////////////////////////////////////////////\n");
+
+	for (int i=0;i<5;i++) {
 		send_mavlink_data_to_qgc(sock); // only send hearbeat package
 		memset(buf, 0, BUFFER_LENGTH);
-		recv_mavlink_data_from_qgc(sock);
-		memset(buf, 0, BUFFER_LENGTH);
+		//recv_mavlink_data_from_qgc(sock);
+		//memset(buf, 0, BUFFER_LENGTH);
 		sleep(1); // Sleep one second
     }
+	
 }//main
 
 void recv_mavlink_data_from_qgc(int sock){
