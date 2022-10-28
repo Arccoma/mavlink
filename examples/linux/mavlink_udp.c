@@ -140,10 +140,11 @@ int main(int argc, char* argv[])
 	gcAddr.sin_addr.s_addr = inet_addr(target_ip);
 	gcAddr.sin_port = htons(14550);
 
-	//msg.msgid = MAVLINK_MSG_ID_BATTERY_STATUS;
 	memset(buf, 0, BUFFER_LENGTH);
 	
+	//////////////////////////////////////////////////////////////
 	printf("%s","\n///////////////////////////////////////////\n\n");
+	//msg.msgid = MAVLINK_MSG_ID_BATTERY_STATUS;
 	mavlink_msg_battery_status_pack(1, 200, &msg,0,1,1,77,voltages,0,0,-1,battery_remaining,0,1,0,0,0);
 	printf("%s", "mavlink_msg_battery_status_pack(.. &msg,..)\n");
 	printf("%s%d", "msg.msgid:",msg.msgid);
@@ -151,14 +152,16 @@ int main(int argc, char* argv[])
 		printf("%s", " is MAVLINK_MSG_ID_BATTERY_STATUS\n\n");
 	}
 	printf("%s","\n//////////////////////////////////////////////\n");
+	//////////////////////////////////////////////////////////////
 
-	for (int i=0;i<5;i++) {
+	for (int i=0;i<100;i++) {
 		send_mavlink_data_to_qgc(sock); // only send hearbeat package
 		memset(buf, 0, BUFFER_LENGTH);
-		//recv_mavlink_data_from_qgc(sock);
-		//memset(buf, 0, BUFFER_LENGTH);
+		recv_mavlink_data_from_qgc(sock);
+		memset(buf, 0, BUFFER_LENGTH);
 		sleep(1); // Sleep one second
     }
+	close(sock);
 	
 }//main
 
@@ -169,7 +172,7 @@ void recv_mavlink_data_from_qgc(int sock){
 	if (recsize > 0){
 		// Something received - print out all bytes and parse packet
 			
-		printf("Bytes Received: %d\nDatagram: ", (int)recsize);
+		printf("Bytes Received from QGC: %d\nDatagram: ", (int)recsize);
 		for (i = 0; i < recsize; ++i)
 		{
 			temp = buf[i];
@@ -186,17 +189,16 @@ void recv_mavlink_data_from_qgc(int sock){
 }
 
 void send_mavlink_data_to_qgc(int sock){
-
+	
 	//Send Heartbeat : I am a Helicopter. My heart is beating.
-	mavlink_msg_heartbeat_pack(1, 200, &msg, MAV_TYPE_HELICOPTER, MAV_AUTOPILOT_GENERIC, MAV_MODE_GUIDED_ARMED, 0, MAV_STATE_ACTIVE);
+	mavlink_msg_heartbeat_pack(1, /*200*/1, &msg, MAV_TYPE_HELICOPTER, MAV_AUTOPILOT_GENERIC, MAV_MODE_GUIDED_ARMED, 0, MAV_STATE_ACTIVE);
 	len = mavlink_msg_to_send_buffer(buf, &msg);
 	bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
 	printf("send heartbeat to QGC\n");
 	
-/*	send another data..
-	
+
+/*//	send another data..
 	//베터리 상태 전송 // arccoma2022.10.04 
-	
 	if(0 == battery_remaining){
 		battery_remaining=100;	// 
 	}
