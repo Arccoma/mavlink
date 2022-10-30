@@ -154,25 +154,27 @@ int main(int argc, char* argv[])
 	printf("%s","\n//////////////////////////////////////////////\n");
 	//////////////////////////////////////////////////////////////
 
-	for (int i=0;i<100;i++) {
+	for (int i=0;i<3000000;i++) 
+	{
+	//	printf("[ %d ] ",i+1);
 		send_mavlink_data_to_qgc(sock); // only send hearbeat package
 		memset(buf, 0, BUFFER_LENGTH);
 		recv_mavlink_data_from_qgc(sock);
 		memset(buf, 0, BUFFER_LENGTH);
-		sleep(1); // Sleep one second
+	//	sleep(1); // Sleep one second
     }
+	printf("close(sock)");
 	close(sock);
 	
 }//main
 
 void recv_mavlink_data_from_qgc(int sock){
-	//msg.msgid = 147;//MAVLINK_MSG_ID_BATTERY_STATUS;
 	
 	recsize = recvfrom(sock, (void *)buf, BUFFER_LENGTH, 0, (struct sockaddr *)&gcAddr, &fromlen);
 	if (recsize > 0){
 		// Something received - print out all bytes and parse packet
 			
-		printf("Bytes Received from QGC: %d\nDatagram: ", (int)recsize);
+		//printf("Bytes Received from QGC: %d\nDatagram: ", (int)recsize);
 		for (i = 0; i < recsize; ++i)
 		{
 			temp = buf[i];
@@ -180,8 +182,12 @@ void recv_mavlink_data_from_qgc(int sock){
 			if (mavlink_parse_char(MAVLINK_COMM_0, buf[i], &msg, &status))
 			{
 				// Packet received
-				
-				printf("\nReceived packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
+				if(MAVLINK_MSG_ID_BATTERY_STATUS==msg.msgid){
+					printf("\nReceived packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
+					mavlink_battery_status_t batteryStatus;
+    				mavlink_msg_battery_status_decode(&msg, &batteryStatus);
+					printf("battery remaining:%d\n",batteryStatus.battery_remaining);
+				}
 			}
 		}
 		printf("\n");
@@ -191,13 +197,15 @@ void recv_mavlink_data_from_qgc(int sock){
 void send_mavlink_data_to_qgc(int sock){
 	
 	//Send Heartbeat : I am a Helicopter. My heart is beating.
-	mavlink_msg_heartbeat_pack(1, /*200*/1, &msg, MAV_TYPE_HELICOPTER, MAV_AUTOPILOT_GENERIC, MAV_MODE_GUIDED_ARMED, 0, MAV_STATE_ACTIVE);
+	mavlink_msg_heartbeat_pack(1, 200, &msg, MAV_TYPE_HELICOPTER, MAV_AUTOPILOT_GENERIC, MAV_MODE_GUIDED_ARMED, 0, MAV_STATE_ACTIVE);
 	len = mavlink_msg_to_send_buffer(buf, &msg);
 	bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
-	printf("send heartbeat to QGC\n");
+	//printf("send heartbeat to QGC\n");
 	
 
-/*//	send another data..
+/*
+//	send another data..
+
 	//베터리 상태 전송 // arccoma2022.10.04 
 	if(0 == battery_remaining){
 		battery_remaining=100;	// 
