@@ -154,16 +154,17 @@ int main(int argc, char* argv[])
 	printf("%s","\n//////////////////////////////////////////////\n");
 	//////////////////////////////////////////////////////////////
 
-	for (int i=0;i<3000000;i++) 
+	for (int i=0;i<60;i++) 
 	{
-	//	printf("[ %d ] ",i+1);
+		printf("[ %d ] ",i+1);
 		send_mavlink_data_to_qgc(sock); // only send hearbeat package
 		memset(buf, 0, BUFFER_LENGTH);
 		recv_mavlink_data_from_qgc(sock);
 		memset(buf, 0, BUFFER_LENGTH);
-	//	sleep(1); // Sleep one second
+		//sleep(1); // Sleep one second
+		usleep(300000);
     }
-	printf("close(sock)");
+	printf("close(sock)\n");
 	close(sock);
 	
 }//main
