@@ -56,7 +56,6 @@
 #define BUFFER_LENGTH 2041 // minimum buffer size that can be used with qnx (I don't know why)
 
 //////////////////////////////////// Variables  //////////////////////////////
-//	main함수에 있던 변수들을 모두 밖으로 뺌. 다른 함수에서 그냥 사용할 수 있도록 하기 위해.
 
 float position[6] = {10,20,30,100,150,10};//x,y,z,vx,vy,vz
 const uint16_t voltages[]={10,11,12,13,14,15,16,17,18,19};// arccoma2022.10.04
@@ -75,7 +74,7 @@ struct sockaddr_in locAddr;
 ssize_t recsize;
 socklen_t fromlen = sizeof(gcAddr);
 
-int i = 0;
+int cntMsgRcv = 0;
 //int success = 0;
 unsigned int temp = 0;
 
@@ -142,27 +141,14 @@ int main(int argc, char* argv[])
 
 	memset(buf, 0, BUFFER_LENGTH);
 	
-	//////////////////////////////////////////////////////////////
-	printf("%s","\n///////////////////////////////////////////\n\n");
-	//msg.msgid = MAVLINK_MSG_ID_BATTERY_STATUS;
-	mavlink_msg_battery_status_pack(1, 200, &msg,0,1,1,77,voltages,0,0,-1,battery_remaining,0,1,0,0,0);
-	printf("%s", "mavlink_msg_battery_status_pack(.. &msg,..)\n");
-	printf("%s%d", "msg.msgid:",msg.msgid);
-	if(MAVLINK_MSG_ID_BATTERY_STATUS==msg.msgid){
-		printf("%s", " is MAVLINK_MSG_ID_BATTERY_STATUS\n\n");
-	}
-	printf("%s","\n//////////////////////////////////////////////\n");
-	//////////////////////////////////////////////////////////////
 
-	for (int i=0;i<60;i++) 
+	for (;;) 
 	{
-		printf("[ %d ] ",i+1);
 		send_mavlink_data_to_qgc(sock); // only send hearbeat package
-		memset(buf, 0, BUFFER_LENGTH);
 		recv_mavlink_data_from_qgc(sock);
 		memset(buf, 0, BUFFER_LENGTH);
 		//sleep(1); // Sleep one second
-		usleep(300000);
+		usleep(500000);
     }
 	printf("close(sock)\n");
 	close(sock);
@@ -170,22 +156,22 @@ int main(int argc, char* argv[])
 }//main
 
 void recv_mavlink_data_from_qgc(int sock){
-	
+	memset(buf, 0, BUFFER_LENGTH);
+	mavlink_battery_status_t batteryStatus;
+
 	recsize = recvfrom(sock, (void *)buf, BUFFER_LENGTH, 0, (struct sockaddr *)&gcAddr, &fromlen);
-	if (recsize > 0){
-		// Something received - print out all bytes and parse packet
-			
+	if (recsize > 0){// Something received - print out all bytes and parse packet
 		//printf("Bytes Received from QGC: %d\nDatagram: ", (int)recsize);
-		for (i = 0; i < recsize; ++i)
+		for (int i = 0; i < recsize; ++i)
 		{
 			temp = buf[i];
-			printf("%02x ", (unsigned char)temp);
+			//printf("%02x ", (unsigned char)temp);
 			if (mavlink_parse_char(MAVLINK_COMM_0, buf[i], &msg, &status))
-			{
-				// Packet received
-				if(MAVLINK_MSG_ID_BATTERY_STATUS==msg.msgid){
-					printf("\nReceived packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
-					mavlink_battery_status_t batteryStatus;
+			{// parsing complite
+				++cntMsgRcv;
+				printf("\n[%d]",cntMsgRcv);
+				printf("Received packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
+				if(MAVLINK_MSG_ID_BATTERY_STATUS==msg.msgid){//147 == 0x93
     				mavlink_msg_battery_status_decode(&msg, &batteryStatus);
 					printf("battery remaining:%d\n",batteryStatus.battery_remaining);
 				}
