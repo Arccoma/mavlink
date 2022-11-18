@@ -127,7 +127,6 @@ int main(int argc, char* argv[])
 #else
 	if (fcntl(sock, F_SETFL, O_NONBLOCK | O_ASYNC) < 0)
 #endif
-
     {
 		fprintf(stderr, "error setting nonblocking: %s\n", strerror(errno));
 		close(sock);
@@ -139,14 +138,10 @@ int main(int argc, char* argv[])
 	gcAddr.sin_addr.s_addr = inet_addr(target_ip);
 	gcAddr.sin_port = htons(14550);
 
-	memset(buf, 0, BUFFER_LENGTH);
-	
-
 	for (;;) 
 	{
 		send_mavlink_data_to_qgc(sock); // only send hearbeat package
 		recv_mavlink_data_from_qgc(sock);
-		memset(buf, 0, BUFFER_LENGTH);
 		//sleep(1); // Sleep one second
 		usleep(500000);
     }
@@ -182,50 +177,12 @@ void recv_mavlink_data_from_qgc(int sock){
 }
 
 void send_mavlink_data_to_qgc(int sock){
-	
+	memset(buf, 0, BUFFER_LENGTH);
 	//Send Heartbeat : I am a Helicopter. My heart is beating.
 	mavlink_msg_heartbeat_pack(1, 200, &msg, MAV_TYPE_HELICOPTER, MAV_AUTOPILOT_GENERIC, MAV_MODE_GUIDED_ARMED, 0, MAV_STATE_ACTIVE);
 	len = mavlink_msg_to_send_buffer(buf, &msg);
 	bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
 	//printf("send heartbeat to QGC\n");
-	
-
-/*
-//	send another data..
-
-	//베터리 상태 전송 // arccoma2022.10.04 
-	if(0 == battery_remaining){
-		battery_remaining=100;	// 
-	}
-	else if( battery_remaining ){
-		battery_remaining-=5;	// full charging
-	}
-	mavlink_msg_battery_status_pack(1, 200, &msg,0,1,1,77,voltages,0,0,-1,battery_remaining,0,1,0,0,0);
-	len = mavlink_msg_to_send_buffer(buf, &msg);
-	bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
-	printf("send battery_status to QGC\n");
-
-
-	// Send Status 
-	mavlink_msg_sys_status_pack(1, 200, &msg, 0, 0, 0, 500, 11000, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-	len = mavlink_msg_to_send_buffer(buf, &msg);
-	bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof (struct sockaddr_in));
-	printf("send system_status to QGC\n");
-		
-	// Send Local Position 
-	mavlink_msg_local_position_ned_pack(1, 200, &msg, microsSinceEpoch(), 
-										position[0], position[1], position[2],
-										position[3], position[4], position[5]);
-	len = mavlink_msg_to_send_buffer(buf, &msg);
-	bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
-	printf("send local_position to QGC\n");
-		
-	// Send attitude 
-	mavlink_msg_attitude_pack(1, 200, &msg, microsSinceEpoch(), 1.2, 1.7, 3.14, 0.01, 0.02, 0.03);
-	len = mavlink_msg_to_send_buffer(buf, &msg);
-	bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
-	printf("send attitude to QGC\n");
-*/
 }
 
 /* QNX timer version */
