@@ -152,7 +152,10 @@ int main(int argc, char* argv[])
 
 void recv_mavlink_data_from_qgc(int sock){
 	memset(buf, 0, BUFFER_LENGTH);
-	mavlink_battery_status_t batteryStatus;
+	mavlink_battery_status_t 	batteryStatus;
+	mavlink_statustext_t 		statustext;
+	//QString     messageText;
+	//QByteArray  b;
 
 	recsize = recvfrom(sock, (void *)buf, BUFFER_LENGTH, 0, (struct sockaddr *)&gcAddr, &fromlen);
 	if (recsize > 0){// Something received - print out all bytes and parse packet
@@ -166,10 +169,29 @@ void recv_mavlink_data_from_qgc(int sock){
 				++cntMsgRcv;
 				printf("\n[%d]",cntMsgRcv);
 				printf("Received packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
-				if(MAVLINK_MSG_ID_BATTERY_STATUS==msg.msgid){//147 == 0x93
+				switch(msg.msgid)
+				{
+				case MAVLINK_MSG_ID_BATTERY_STATUS: // 147 == 0x93
     				mavlink_msg_battery_status_decode(&msg, &batteryStatus);
 					printf("battery remaining:%d\n",batteryStatus.battery_remaining);
+					break;
+				case MAVLINK_MSG_ID_STATUSTEXT: // 253
+					mavlink_msg_statustext_decode(&msg, &statustext);
+					printf("%s\n",statustext.text);
+					if("Takeoff detected\t"== statustext.text){
+						printf("- Takeoff - Takeoff - Takeoff - Takeoff -\n");	
+					}
+					else if("RTL HOME activated\t" == statustext.text){
+						printf("- RTL - RTL - RTL - RTL - RTL - RTL -\n");
+					}
+					else if("Manual control lost\t" == statustext.text){
+						printf("- RC LOSS - RC LOSS - RC LOSS - RC LOSS -\n");
+					}
+					break;
+				case MAVLINK_MSG_ID_HEARTBEAT: // 0
+					break;
 				}
+
 			}
 		}
 		printf("\n");
@@ -179,7 +201,7 @@ void recv_mavlink_data_from_qgc(int sock){
 void send_mavlink_data_to_qgc(int sock){
 	memset(buf, 0, BUFFER_LENGTH);
 	//Send Heartbeat : I am a Helicopter. My heart is beating.
-	mavlink_msg_heartbeat_pack(1, 200, &msg, MAV_TYPE_HELICOPTER, MAV_AUTOPILOT_GENERIC, MAV_MODE_GUIDED_ARMED, 0, MAV_STATE_ACTIVE);
+	mavlink_msg_heartbeat_pack(99, 200, &msg, MAV_TYPE_HELICOPTER, MAV_AUTOPILOT_GENERIC, MAV_MODE_GUIDED_ARMED, 0, MAV_STATE_ACTIVE);
 	len = mavlink_msg_to_send_buffer(buf, &msg);
 	bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
 	//printf("send heartbeat to QGC\n");
